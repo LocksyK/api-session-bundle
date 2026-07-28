@@ -1,0 +1,10 @@
+# Keep dist archives (composer install from Packagist) lean; the full
+# tree - tests, docs, tooling - stays available from the source repo.
+/DESIGN.md              export-ignore
+/.gitattributes         export-ignore
+/.github/               export-ignore
+/.gitignore             export-ignore
+/.php-cs-fixer.dist.php export-ignore
+/phpstan.dist.neon      export-ignore
+/phpunit.xml.dist       export-ignore
+/tests/                 export-ignore

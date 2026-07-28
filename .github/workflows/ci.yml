@@ -1,0 +1,46 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request: ~
+    # Pushes made with an integration token create no workflow events, so
+    # allow manual runs (e.g. for agent-pushed commits).
+    workflow_dispatch: ~
+
+jobs:
+    tests:
+        name: "Tests (PHP ${{ matrix.php }}, ${{ matrix.dependencies }} deps)"
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                php: ['8.2', '8.3', '8.4']
+                dependencies: [highest]
+                include:
+                    # Lowest deps on the lowest PHP ≈ Symfony 6.4 / oldest supported set.
+                    - php: '8.2'
+                      dependencies: lowest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '${{ matrix.php }}'
+                  coverage: none
+            - uses: ramsey/composer-install@v4
+              with:
+                  dependency-versions: '${{ matrix.dependencies }}'
+            - run: vendor/bin/phpunit
+
+    static-analysis:
+        name: Static analysis and coding standards
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.4'
+                  coverage: none
+            - uses: ramsey/composer-install@v4
+            - run: vendor/bin/phpstan analyse --no-progress
+            - run: vendor/bin/php-cs-fixer check --diff

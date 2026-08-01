@@ -30,7 +30,8 @@ into a bearer token:
 - **Optional absolute lifetime + refresh** - expiry is embedded and
   signed in the token itself; no server-side bookkeeping to corrupt.
 
-Requirements: PHP ≥ 8.2, Symfony 6.4 LTS or 7.x.
+Requirements: PHP >= 8.2, Symfony 6.4 LTS, 7.x or 8.x (Symfony 8
+requires PHP >= 8.4).
 
 ## Installation
 

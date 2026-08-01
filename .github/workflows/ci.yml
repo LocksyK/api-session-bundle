@@ -15,10 +15,12 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
+                # Highest deps resolve Symfony 7.4 on PHP 8.2/8.3 and
+                # Symfony 8.x on PHP 8.4 (Symfony 8 needs PHP >= 8.4).
                 php: ['8.2', '8.3', '8.4']
                 dependencies: [highest]
                 include:
-                    # Lowest deps on the lowest PHP ≈ Symfony 6.4 / oldest supported set.
+                    # Lowest deps on the lowest PHP & Symfony 6.4 / oldest supported set.
                     - php: '8.2'
                       dependencies: lowest
         steps:

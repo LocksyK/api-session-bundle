@@ -41,5 +41,7 @@ final class BundleBootTest extends KernelTestCase
         self::assertTrue($container->getParameter('api_session.stale_token.www_authenticate'));
         self::assertTrue($container->getParameter('api_session.logout.json_response'));
         self::assertSame('ROLE_ALLOWED_TO_SWITCH', $container->getParameter('api_session.switch_user.role'));
+        // "auto" is normalised to null - decided per request, not baked in.
+        self::assertNull($container->getParameter('api_session.switch_user.grant_previous_admin_role'));
     }
 }

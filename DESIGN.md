@@ -250,6 +250,18 @@ provider reloads, which reads as "the user changed" and deauthenticates
 the session on the *next* request - enter answers 200 and everything
 after it 401s. The enter controller appends the role only below 7.0.
 
+Which side of 7.0 we are on is guessed from `Kernel::VERSION_ID`, i.e.
+http-kernel's version standing in for security-http's; their constraints
+permit different majors (security-http 6.4 accepts http-kernel `^7.0`),
+and that pairing is exactly where the guess is wrong. Rather than take a
+`composer-runtime-api` dependency to read security-http's own version,
+the guess is the *default* of a three-state option,
+`switch_user.grant_previous_admin_role: auto|true|false`, so any install
+the guess fails can state the answer. `auto` normalises to a null
+container parameter and is resolved per request, not at compile time - a
+container built before a Symfony major upgrade must not bake in the old
+answer.
+
 This is invisible to any test whose user implements `EquatableInterface`
 (`InMemoryUser` does): `hasUserChanged()` delegates to `isEqualTo()`
 first, which compares two *users* and never sees the token. The
@@ -379,6 +391,7 @@ api_session:
         json_response: false      # opt-in: 204 on logout instead of redirect
     switch_user:
         role: ROLE_ALLOWED_TO_SWITCH
+        grant_previous_admin_role: auto   # auto | true | false (§6)
 ```
 
 The header itself is fixed to `Authorization: Bearer`; switch-user needs

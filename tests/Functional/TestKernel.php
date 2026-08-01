@@ -135,6 +135,15 @@ final class TestKernel extends Kernel
             // expiries in real time.
             $apiSession['token'] = ['lifetime' => 4];
         }
+        // Both directions of the ROLE_PREVIOUS_ADMIN override, so the
+        // assertions hold whichever way "auto" would have gone on the
+        // Symfony being tested.
+        if ('prevadminon' === $this->environment) {
+            $apiSession['switch_user'] = ['grant_previous_admin_role' => true];
+        }
+        if ('prevadminoff' === $this->environment) {
+            $apiSession['switch_user'] = ['grant_previous_admin_role' => false];
+        }
         $container->extension('api_session', $apiSession);
 
         $services = $container->services();

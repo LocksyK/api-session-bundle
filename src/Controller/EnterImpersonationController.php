@@ -48,6 +48,21 @@ final class EnterImpersonationController
     private const ROLE_PREVIOUS_ADMIN = 'ROLE_PREVIOUS_ADMIN';
 
     /**
+     * The ROLE_PREVIOUS_ADMIN convention is all-or-nothing, and it ended
+     * with security-http 7.0. Up to 6.4, SwitchUserListener appended the
+     * role to the impersonation token *and*
+     * ContextListener::hasUserChanged() added it to the role set it
+     * expected that token to carry; both halves were dropped together in
+     * 7.0. So a token whose roles disagree with the refreshed user's -
+     * carrying the role on 7.0+, or omitting it on 6.4 - counts as "the
+     * user has changed", and the session is silently deauthenticated when
+     * the *next* request refreshes it: enter returns 200, everything
+     * after it 401s.
+     *
+     * $grantPreviousAdminRole therefore has to match the installed
+     * security-http. Null means "work it out per request"; true/false
+     * force it, for the installs where the guess would be wrong.
+     *
      * @param UserProviderInterface<UserInterface>|null $userProvider
      */
     public function __construct(
@@ -57,6 +72,7 @@ final class EnterImpersonationController
         private readonly BridgedFirewallResolver $firewalls,
         private readonly ?UserProviderInterface $userProvider,
         private readonly string $requiredRole,
+        private readonly ?bool $grantPreviousAdminRole = null,
     ) {
     }
 
@@ -99,7 +115,7 @@ final class EnterImpersonationController
         }
 
         $roles = $target->getRoles();
-        if (self::grantsPreviousAdminRole()) {
+        if ($this->grantPreviousAdminRole ?? self::securityHttpGrantsPreviousAdminRole()) {
             $roles[] = self::ROLE_PREVIOUS_ADMIN;
         }
         $token = new SwitchUserToken($target, $firewall->getName(), $roles, $originalToken);
@@ -121,26 +137,20 @@ final class EnterImpersonationController
     }
 
     /**
-     * The ROLE_PREVIOUS_ADMIN convention is all-or-nothing, and it ended
-     * with security-http 7.0.
+     * Whether the installed security-http still expects the role, guessed
+     * from http-kernel's version - the "auto" behind a null
+     * $grantPreviousAdminRole.
      *
-     * Up to 6.4, SwitchUserListener appended the role to the impersonation
-     * token *and* ContextListener::hasUserChanged() added it to the role
-     * set it expected that token to carry. Both halves were dropped
-     * together in 7.0. So a token whose roles disagree with the refreshed
-     * user's roles - carrying the role on 7.0+, or omitting it on 6.4 -
-     * counts as "user has changed", and the session is silently
-     * deauthenticated when the *next* request refreshes it: enter returns
-     * 200, everything after it 401s.
-     *
-     * Note this reads http-kernel's version as a stand-in for
-     * security-http's. The two can technically sit on different majors
-     * (security-http 6.4 accepts http-kernel ^7.0), which would flip this
-     * the wrong way; keeping every Symfony component on one major - the
-     * normal arrangement, and what Flex enforces - avoids that.
+     * The two components can technically sit on different majors
+     * (security-http 6.4 accepts http-kernel ^7.0), and this guess is
+     * wrong for exactly that pairing. Keeping every Symfony component on
+     * one major - the normal arrangement, and what Flex enforces - avoids
+     * it; an app that cannot sets switch_user.grant_previous_admin_role
+     * explicitly.
      */
-    private static function grantsPreviousAdminRole(): bool
+    private static function securityHttpGrantsPreviousAdminRole(): bool
     {
-        return version_compare(Kernel::VERSION, '7.0.0', '<');
+        // @phpstan-ignore-next-line - Kernel::VERSION_ID is constant-folded by PHPStan
+        return Kernel::VERSION_ID < 70000;
     }
 }

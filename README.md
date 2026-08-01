@@ -128,6 +128,7 @@ api_session:
         json_response: false       # opt-in: 204 on logout
     switch_user:
         role: ROLE_ALLOWED_TO_SWITCH
+        grant_previous_admin_role: auto    # auto | true | false
 ```
 
 ## Token format
@@ -208,6 +209,14 @@ so on 7.0+ the role must be absent or the token's roles no longer match
 the reloaded user's and the session is deauthenticated on the next
 request. Check `IS_IMPERSONATOR` rather than the role in your own
 voters; it works on every supported version.
+
+The default `grant_previous_admin_role: auto` reads `http-kernel`'s
+version as a stand-in for `security-http`'s, which is right for any
+install that keeps its Symfony components on one major. Set it to `true`
+or `false` if yours does not - `security-http` 6.4 with `http-kernel`
+`^7.0` is the pairing `auto` gets wrong (it needs `true`). The symptom of
+a wrong value is impersonation that returns `200` and then `401`s on
+every request after it.
 
 Guard listeners subscribe to the bundle's `ImpersonationEnteredEvent` /
 `ImpersonationExitedEvent` - each fires only for its direction, so no

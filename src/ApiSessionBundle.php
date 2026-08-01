@@ -86,6 +86,11 @@ final class ApiSessionBundle extends AbstractBundle
                             ->info('Role required to enter impersonation via the switch-user endpoint.')
                             ->defaultValue('ROLE_ALLOWED_TO_SWITCH')
                         ->end()
+                        ->enumNode('grant_previous_admin_role')
+                            ->info('Append ROLE_PREVIOUS_ADMIN to the impersonation token, as security-http did below 7.0. Must match the installed security-http or the session is deauthenticated on the next request; "auto" reads http-kernel\'s version, which is only wrong if security-http sits on a different major.')
+                            ->values(['auto', true, false])
+                            ->defaultValue('auto')
+                        ->end()
                     ->end()
                 ->end()
             ->end();
@@ -98,7 +103,7 @@ final class ApiSessionBundle extends AbstractBundle
      *     csrf_bypass: bool,
      *     stale_token: array{www_authenticate: bool},
      *     logout: array{json_response: bool},
-     *     switch_user: array{role: string},
+     *     switch_user: array{role: string, grant_previous_admin_role: 'auto'|bool},
      * } $config
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
@@ -113,7 +118,16 @@ final class ApiSessionBundle extends AbstractBundle
             ->set('api_session.csrf_bypass', $config['csrf_bypass'])
             ->set('api_session.stale_token.www_authenticate', $config['stale_token']['www_authenticate'])
             ->set('api_session.logout.json_response', $config['logout']['json_response'])
-            ->set('api_session.switch_user.role', $config['switch_user']['role']);
+            ->set('api_session.switch_user.role', $config['switch_user']['role'])
+            // "auto" becomes null: the controller decides per request from
+            // the running version, so a container built before a Symfony
+            // upgrade cannot bake in the wrong answer.
+            ->set(
+                'api_session.switch_user.grant_previous_admin_role',
+                'auto' === $config['switch_user']['grant_previous_admin_role']
+                    ? null
+                    : $config['switch_user']['grant_previous_admin_role'],
+            );
 
         $services = $container->services();
 

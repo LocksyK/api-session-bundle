@@ -27,8 +27,22 @@ final class SwitchUserEventRecorder
      */
     public static array $targets = [];
 
+    /**
+     * Role names of the token each dispatch carried, which is the only
+     * place to observe them: on security-http 7.0+ a token carrying
+     * ROLE_PREVIOUS_ADMIN does not survive into the next request.
+     *
+     * @var list<list<string>>
+     */
+    public static array $tokenRoles = [];
+
     public function __invoke(SwitchUserEvent $event): void
     {
+        $token = $event->getToken();
+
         self::$targets[] = $event->getTargetUser()->getUserIdentifier();
+        // A null token would be a listener having unset it; record the
+        // empty role set and let the asserting test say so.
+        self::$tokenRoles[] = null === $token ? [] : array_values($token->getRoleNames());
     }
 }

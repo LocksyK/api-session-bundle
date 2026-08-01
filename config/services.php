@@ -122,6 +122,7 @@ return static function (ContainerConfigurator $container): void {
             // multi-provider apps rebind this argument.
             service(UserProviderInterface::class)->nullOnInvalid(),
             param('api_session.switch_user.role'),
+            param('api_session.switch_user.grant_previous_admin_role'),
         ])
         ->tag('controller.service_arguments');
 

@@ -195,10 +195,19 @@ api_impersonate_exit:
 ```
 
 `POST` with `{"identifier": "<user>"}` enters impersonation (requires
-`switch_user.role`; the impersonation token carries the target's roles
-plus `ROLE_PREVIOUS_ADMIN`, so `IS_IMPERSONATOR` and friends behave as
-usual); `DELETE` exits. Responses: `400` bad body, `403` missing role or
-listener veto, `404` unknown target, `409` already/not impersonating.
+`switch_user.role`; the impersonation token carries the target's roles,
+and `IS_IMPERSONATOR` and friends behave as usual); `DELETE` exits.
+Responses: `400` bad body, `403` missing role or listener veto, `404`
+unknown target, `409` already/not impersonating.
+
+The token also carries `ROLE_PREVIOUS_ADMIN` on Symfony 6.4 only,
+matching what that version's built-in `switch_user` did. Symfony 7.0
+dropped the convention on both sides at once - `SwitchUserListener`
+stopped granting the role, and `ContextListener` stopped expecting it -
+so on 7.0+ the role must be absent or the token's roles no longer match
+the reloaded user's and the session is deauthenticated on the next
+request. Check `IS_IMPERSONATOR` rather than the role in your own
+voters; it works on every supported version.
 
 Guard listeners subscribe to the bundle's `ImpersonationEnteredEvent` /
 `ImpersonationExitedEvent` - each fires only for its direction, so no

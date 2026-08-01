@@ -235,9 +235,27 @@ app declares routes pointing at them, so nothing impersonation-related
 exists unless the app opts in, and the app controls paths and methods.
 
 Semantics mirror the built-in feature: the impersonation token wraps the
-original token and carries the target's roles plus
-`ROLE_PREVIOUS_ADMIN`, so `IS_IMPERSONATOR` and exit-permission voters
-behave as usual; the session token is *not* rotated by enter/exit.
+original token and carries the target's roles, so `IS_IMPERSONATOR` and
+exit-permission voters behave as usual; the session token is *not*
+rotated by enter/exit.
+
+Mirroring the built-in feature includes its role set, which changed
+under us. Up to security-http 6.4, `SwitchUserListener` appended
+`ROLE_PREVIOUS_ADMIN` to the token and
+`ContextListener::hasUserChanged()` added that role to the set it
+expected the token to carry; 7.0 removed both halves together. The
+convention is therefore all-or-nothing per version: a token carrying the
+role on 7.0+, or omitting it on 6.4, disagrees with the roles the
+provider reloads, which reads as "the user changed" and deauthenticates
+the session on the *next* request - enter answers 200 and everything
+after it 401s. The enter controller appends the role only below 7.0.
+
+This is invisible to any test whose user implements `EquatableInterface`
+(`InMemoryUser` does): `hasUserChanged()` delegates to `isEqualTo()`
+first, which compares two *users* and never sees the token. The
+functional coverage therefore runs a user class without it - see
+`ImpersonationTokenRefreshTest` - and asserts a follow-up request, since
+the enter response itself is issued before any refresh happens.
 
 Enter: JSON body `{"identifier": "<user>"}`; responds 200
 `{user, impersonator}`, 400 (bad/missing body), 403 (configured role

@@ -24,6 +24,8 @@ use LocksyK\ApiSessionBundle\Event\SessionTokenMintedEvent;
 use LocksyK\ApiSessionBundle\Event\StaleSessionTokenEvent;
 use LocksyK\ApiSessionBundle\Event\VerifySessionTokenEvent;
 use LocksyK\ApiSessionBundle\Tests\Functional\Fixture\DenyBobImpersonationListener;
+use LocksyK\ApiSessionBundle\Tests\Functional\Fixture\PlainUser;
+use LocksyK\ApiSessionBundle\Tests\Functional\Fixture\PlainUserProvider;
 use LocksyK\ApiSessionBundle\Tests\Functional\Fixture\RevokeSupersededTokensListener;
 use LocksyK\ApiSessionBundle\Tests\Functional\Fixture\SessionAgeCapListener;
 use LocksyK\ApiSessionBundle\Tests\Functional\Fixture\StaleTokenEventRecorder;
@@ -88,12 +90,18 @@ final class TestKernel extends Kernel
             ],
         ]);
 
+        // The "plainuser" environment swaps in a user class that does not
+        // implement EquatableInterface, which is what lets
+        // ContextListener::hasUserChanged() reach its token-role check.
+        $usesPlainUser = 'plainuser' === $this->environment;
+
         $container->extension('security', [
             'password_hashers' => [
                 InMemoryUser::class => 'plaintext',
+                PlainUser::class => 'plaintext',
             ],
             'providers' => [
-                'users' => [
+                'users' => $usesPlainUser ? ['id' => PlainUserProvider::class] : [
                     'memory' => [
                         'users' => [
                             'alice' => ['password' => 'secret', 'roles' => ['ROLE_USER']],
@@ -130,6 +138,9 @@ final class TestKernel extends Kernel
         $container->extension('api_session', $apiSession);
 
         $services = $container->services();
+        if ($usesPlainUser) {
+            $services->set(PlainUserProvider::class);
+        }
         $services->set(DenyBobImpersonationListener::class)
             ->tag('kernel.event_listener', ['event' => ImpersonationEnteredEvent::class]);
         $services->set(SwitchUserEventRecorder::class)
